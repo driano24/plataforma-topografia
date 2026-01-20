@@ -1,0 +1,497 @@
+---
+// src/pages/viewer.astro
+// VISOR FINAL: Robusto contra errores de carga y conversión
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Proyectos | VVST</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.72/pdfmake.min.js"></script>
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.72/vfs_fonts.js"></script>
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+
+    <style>
+        body { font-family: 'Roboto', sans-serif; }
+        #map { height: 100%; width: 100%; border-radius: 8px; z-index: 1; background: #e2e8f0; }
+        
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid; }
+        .bg-ok { background: #dcfce7; color: #15803d; border-color: #86efac; }
+        .bg-warn { background: #fef9c3; color: #a16207; border-color: #fde047; }
+        .bg-crit { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+
+        .arrow-icon { display: flex; justify-content: center; align-items: center; }
+        .map-arrow { filter: drop-shadow(1px 1px 0px rgba(0,0,0,0.5)); }
+
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95); z-index: 9999;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <script is:inline>
+        const user = localStorage.getItem('vvst_user');
+        if (!user) window.location.href = '/login';
+    </script>
+
+    <div id="loader">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-900 mb-4"></div>
+        <h2 class="text-2xl font-bold text-blue-900">Procesando...</h2>
+    </div>
+
+    <header class="bg-white border-b border-slate-300 h-14 flex items-center justify-between px-6 shadow-sm z-20">
+        <div class="flex items-center gap-3">
+            <a href="/dashboard" class="text-slate-400 hover:text-slate-600 mr-2 text-lg">←</a>
+            <div class="w-8 h-8 bg-blue-900 rounded flex items-center justify-center text-white font-bold">VV</div>
+            <div>
+                <h1 class="text-sm font-bold text-slate-900 leading-tight">MONITOREO GEOTÉCNICO</h1>
+                <p class="text-[10px] text-slate-500 tracking-wider">PROJECT VIEWER</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <select id="mainProjectSel" class="bg-slate-50 border border-slate-300 text-sm rounded px-3 py-1 font-bold text-slate-700 outline-none focus:border-blue-500 w-64" onchange="loadProjectData()">
+                <option value="">Inicializando...</option>
+            </select>
+            <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs" id="userAvatar">U</div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+        <aside class="w-72 bg-white border-r border-slate-200 p-4 flex flex-col gap-5 z-10 shadow-lg overflow-y-auto">
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">1. Campaña Base</label>
+                <select id="campBase" class="w-full border border-slate-300 rounded p-2 text-sm bg-slate-50" onchange="recalculate()">
+                    <option value="0">Automático (Inicial)</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">2. Campaña Actual</label>
+                <select id="campActual" class="w-full border border-blue-300 rounded p-2 text-sm bg-blue-50 font-bold text-blue-900" onchange="recalculate()">
+                    <option value="">Esperando datos...</option>
+                </select>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-100 p-2 rounded text-[10px] text-blue-800">
+                <i class="fas fa-info-circle mr-1"></i> Sistema: <b>MAGNA-SIRGAS (Origen Nacional)</b> habilitado.
+            </div>
+
+            <hr class="border-slate-100">
+            <div>
+                <h4 class="font-bold text-sm text-slate-700 mb-2">Visualización</h4>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="chkVectors" checked class="accent-blue-600" onchange="renderMap()"> Mostrar Vectores
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="chkLabels" checked class="accent-blue-600" onchange="renderMap()"> Mostrar Etiquetas
+                    </label>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-bold text-sm text-slate-700 mb-2">Filtros</h4>
+                <input type="text" id="searchFilter" placeholder="Buscar punto..." class="w-full border rounded p-1 text-sm mb-2" onkeyup="renderTable()">
+                <select id="statusFilter" class="w-full border rounded p-1 text-sm" onchange="renderTable()">
+                    <option value="all">Todos los estados</option>
+                    <option value="crit">Críticos (>15mm)</option>
+                    <option value="warn">Alerta (5-15mm)</option>
+                </select>
+            </div>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0 bg-slate-100 p-2 gap-2">
+            <div class="h-3/5 flex gap-2">
+                <div class="flex-1 bg-white p-1 rounded-lg shadow-sm border border-slate-200 relative">
+                    <div id="map"></div>
+                    <div class="absolute top-3 right-3 bg-white p-1 rounded shadow z-[500] text-xs font-bold border border-slate-300 cursor-pointer hover:bg-slate-50">🗺️ Satélite</div>
+                </div>
+                <div class="w-80 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col">
+                    <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-lg">
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase">Punto Seleccionado</p>
+                            <h2 id="selPointId" class="text-xl font-bold text-slate-800">--</h2>
+                        </div>
+                        <span id="selStatus" class="badge bg-ok">--</span>
+                    </div>
+                    <div class="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100 bg-white">
+                        <div class="p-2 text-center">
+                            <p class="text-[10px] text-slate-400 font-bold">MOV. 2D</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="valMov">0.0</span> <small class="text-[9px] text-slate-400">mm</small></p>
+                        </div>
+                        <div class="p-2 text-center">
+                            <p class="text-[10px] text-slate-400 font-bold">VELOCIDAD</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="valVel">0.0</span> <small class="text-[9px] text-slate-400">mm/d</small></p>
+                        </div>
+                        <div class="p-2 text-center">
+                            <p class="text-[10px] text-slate-400 font-bold">AZIMUT</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="valAz">0</span> <small class="text-[9px] text-slate-400">°</small></p>
+                        </div>
+                    </div>
+                    <div class="flex-1 p-2 flex flex-col">
+                        <div class="flex justify-center gap-2 mb-2">
+                            <button onclick="setChartMode('trend')" class="text-[10px] font-bold px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100">Tendencia</button>
+                            <button onclick="setChartMode('traj')" class="text-[10px] font-bold px-2 py-1 rounded bg-slate-50 text-slate-600 border border-slate-200">Trayectoria</button>
+                        </div>
+                        <div class="flex-1 relative w-full">
+                            <canvas id="chartCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-2/5 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                <div class="p-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h5 class="text-xs font-bold text-slate-600 uppercase flex items-center gap-2">
+                        📅 Matriz de Datos <span id="tableCount" class="bg-blue-100 text-blue-600 px-2 rounded-full text-[10px]">0</span>
+                    </h5>
+                    <div class="flex gap-2">
+                        <button onclick="generatePDF()" class="text-[10px] font-bold text-white bg-red-600 border border-red-700 px-3 py-1 rounded hover:bg-red-700 transition flex items-center gap-2 shadow-sm">
+                            <i class="fas fa-file-pdf"></i> GENERAR REPORTE PDF
+                        </button>
+                        <button onclick="exportCSV()" class="text-[10px] font-bold text-emerald-600 border border-emerald-200 px-3 py-1 rounded hover:bg-emerald-50 transition flex items-center gap-1">
+                            <i class="fas fa-file-excel"></i> CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 bg-white shadow-sm z-10 text-[10px] uppercase text-slate-500 font-bold">
+                            <tr>
+                                <th class="p-2 border-b">ID</th>
+                                <th class="p-2 border-b text-right">Norte</th>
+                                <th class="p-2 border-b text-right">Este</th>
+                                <th class="p-2 border-b text-right">Cota</th>
+                                <th class="p-2 border-b text-right text-blue-600">Δ 2D</th>
+                                <th class="p-2 border-b text-right text-blue-600">Δ Z</th>
+                                <th class="p-2 border-b text-right">Vel</th>
+                                <th class="p-2 border-b text-center">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody" class="text-xs font-mono text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script is:inline>
+        // VARIABLES GLOBALES
+        let map, markersLayer, vectorsLayer;
+        let chartInstance = null;
+        let chartMode = 'trend';
+        let MEMORY = { projects: [], campaigns: [], dataByCamp: {}, history: {}, processed: [] };
+        
+        const currentUser = localStorage.getItem('vvst_user');
+        document.getElementById('userAvatar').innerText = currentUser ? currentUser.substring(0,2).toUpperCase() : 'U';
+
+        // DEFINIR PROYECCIÓN (MAGNA-SIRGAS Origen Nacional)
+        if(typeof proj4 !== 'undefined') {
+            proj4.defs("EPSG:9377","+proj=tmerc +lat_0=4 +lon_0=-73 +k=0.9992 +x_0=5000000 +y_0=2000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+        }
+
+        // --- INICIAR ---
+        window.addEventListener('load', () => {
+            initMap();
+            loadProjects();
+        });
+
+        function initMap() {
+            try {
+                map = L.map('map', { preferCanvas: true }).setView([4.6, -74.1], 6);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' }).addTo(map);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
+                markersLayer = L.layerGroup().addTo(map);
+                vectorsLayer = L.layerGroup().addTo(map);
+            } catch(e) { console.error("Error iniciando mapa:", e); }
+        }
+
+        // --- CARGA DE PROYECTOS ---
+        async function loadProjects() {
+            const sel = document.getElementById('mainProjectSel');
+            sel.innerHTML = '<option value="">Cargando proyectos...</option>';
+            
+            try {
+                // Sanitizar usuario para URL
+                const safeUser = encodeURIComponent(currentUser);
+                const res = await fetch(`/api/admin?action=get_projects&user=${safeUser}`);
+                
+                if(!res.ok) throw new Error(`HTTP ${res.status}`);
+                
+                const data = await res.json();
+                
+                sel.innerHTML = '<option value="">-- Seleccione Proyecto --</option>';
+                
+                if (Array.isArray(data) && data.length > 0) {
+                    data.forEach(p => sel.add(new Option(p.name, p.id)));
+                } else {
+                    sel.innerHTML = '<option value="">No hay proyectos asignados</option>';
+                }
+            } catch(e) { 
+                console.error(e);
+                sel.innerHTML = '<option>⚠️ Error de Conexión</option>'; 
+                alert("No se pudieron cargar los proyectos. Verifique su conexión o rol.");
+            }
+        }
+
+        // --- CARGA DE DATOS DEL PROYECTO ---
+        async function loadProjectData() {
+            const pid = document.getElementById('mainProjectSel').value;
+            if(!pid) return;
+            
+            const loader = document.getElementById('loader');
+            loader.style.display = 'flex';
+            
+            MEMORY = { campaigns: [], dataByCamp: {}, history: {}, processed: [] };
+            markersLayer.clearLayers(); vectorsLayer.clearLayers();
+            document.getElementById('dataTableBody').innerHTML = '';
+
+            try {
+                // 1. Campañas
+                const resCamp = await fetch(`/api/admin?action=get_campaigns&project_id=${pid}`);
+                const camps = await resCamp.json();
+                MEMORY.campaigns = camps.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+                
+                // Llenar Selectores
+                const selBase = document.getElementById('campBase');
+                const selCurr = document.getElementById('campActual');
+                selBase.innerHTML = '<option value="-1">Automático (Inicial)</option>';
+                selCurr.innerHTML = '';
+                
+                if(MEMORY.campaigns.length === 0) {
+                    selCurr.innerHTML = '<option>Sin datos</option>';
+                    loader.style.display = 'none';
+                    return;
+                }
+
+                MEMORY.campaigns.forEach((c, idx) => {
+                    const date = c.created_at.split('T')[0];
+                    selBase.add(new Option(`${c.name} (${date})`, idx));
+                    selCurr.add(new Option(`${c.name} (${date})`, idx));
+                });
+                selCurr.selectedIndex = MEMORY.campaigns.length - 1;
+
+                // 2. Puntos
+                const resData = await fetch(`/api/admin?action=get_data&project_id=${pid}`);
+                const jsonPoints = await resData.json();
+                const allPoints = jsonPoints.data || [];
+
+                // 3. Procesar y Convertir Coordenadas
+                allPoints.forEach(p => {
+                    if(!MEMORY.dataByCamp[p.campaign_id]) MEMORY.dataByCamp[p.campaign_id] = [];
+                    MEMORY.dataByCamp[p.campaign_id].push(p);
+                    
+                    if(!MEMORY.history[p.point_id]) MEMORY.history[p.point_id] = [];
+                    const camp = MEMORY.campaigns.find(c => c.id == p.campaign_id);
+                    
+                    // CONVERSIÓN
+                    let lat = parseFloat(p.latitude);
+                    let lon = parseFloat(p.longitude);
+                    const n = parseFloat(p.north);
+                    const e = parseFloat(p.east);
+
+                    if ((lat === 0 && lon === 0) && typeof proj4 !== 'undefined') {
+                        try {
+                            const converted = proj4("EPSG:9377", "EPSG:4326", [e, n]);
+                            lon = converted[0];
+                            lat = converted[1];
+                        } catch(err) {}
+                    }
+
+                    if(camp) {
+                        MEMORY.history[p.point_id].push({
+                            date: camp.created_at.split('T')[0], 
+                            n: n, e: e, z: parseFloat(p.elevation),
+                            lat: lat, lon: lon
+                        });
+                    }
+                });
+                
+                // Ordenar Historial
+                for(let k in MEMORY.history) MEMORY.history[k].sort((a,b) => new Date(a.date) - new Date(b.date));
+                
+                recalculate();
+
+            } catch(e) { 
+                console.error(e); alert("Error cargando datos: " + e.message); 
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function recalculate() {
+            const idxCurr = document.getElementById('campActual').value;
+            const idxBase = document.getElementById('campBase').value;
+            if(idxCurr === "" || !MEMORY.campaigns[idxCurr]) return;
+            
+            const currCamp = MEMORY.campaigns[idxCurr];
+            const currPoints = MEMORY.dataByCamp[currCamp.id] || [];
+            MEMORY.processed = [];
+
+            currPoints.forEach(curr => {
+                const hist = MEMORY.history[curr.point_id];
+                if(!hist) return;
+
+                let base = idxBase == "-1" ? hist[0] : (MEMORY.dataByCamp[MEMORY.campaigns[idxBase].id] || []).find(p => p.point_id === curr.point_id);
+                if(!base && idxBase != "-1") base = hist[0];
+
+                const dN = (parseFloat(curr.north) - parseFloat(base.north || base.n)) * 1000;
+                const dE = (parseFloat(curr.east) - parseFloat(base.east || base.e)) * 1000;
+                const dZ = (parseFloat(curr.elevation) - parseFloat(base.elevation || base.z)) * 1000;
+                const mov2d = Math.sqrt(dN**2 + dE**2);
+                let az = (Math.atan2(dE, dN) * 180 / Math.PI);
+                if(az < 0) az += 360;
+                
+                const days = (new Date(currCamp.created_at) - new Date(base.created_at || base.date)) / 86400000;
+                
+                // Usar la coordenada convertida más reciente del historial para el mapa
+                const validGeo = hist.find(h => h.lat !== 0 && !isNaN(h.lat));
+                const mapLat = validGeo ? validGeo.lat : 0;
+                const mapLon = validGeo ? validGeo.lon : 0;
+
+                MEMORY.processed.push({
+                    id: curr.point_id, 
+                    n: parseFloat(curr.north), e: parseFloat(curr.east), z: parseFloat(curr.elevation),
+                    lat: mapLat, lon: mapLon,
+                    dN, dE, dZ, mov2d, az, 
+                    vel: days > 0 ? mov2d/days : 0,
+                    status: mov2d > 15 ? 'crit' : (mov2d > 5 ? 'warn' : 'normal')
+                });
+            });
+            renderMap(); renderTable();
+        }
+
+        function renderMap() {
+            if(!map) return;
+            markersLayer.clearLayers(); vectorsLayer.clearLayers();
+            const showV = document.getElementById('chkVectors').checked;
+            const showL = document.getElementById('chkLabels').checked;
+            const bounds = [];
+            
+            MEMORY.processed.forEach(p => {
+                if(p.lat === 0 || p.lon === 0) return;
+                
+                const color = p.status === 'crit' ? '#ef4444' : (p.status === 'warn' ? '#eab308' : '#22c55e');
+                const m = L.circleMarker([p.lat, p.lon], {radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 1}).addTo(markersLayer);
+                m.on('click', () => selectPointByName(p.id));
+                
+                if(showL) m.bindTooltip(p.id, {permanent: true, direction: 'top', className:'text-xs font-bold'});
+                if(showV && p.mov2d > 2) {
+                    const icon = L.divIcon({className: 'arrow-icon', html: `<i class="fas fa-long-arrow-alt-up map-arrow" style="transform: rotate(${p.az}deg); color: ${color}; font-size: 24px; -webkit-text-stroke: 1px black;"></i>`});
+                    L.marker([p.lat, p.lon], {icon, interactive:false}).addTo(vectorsLayer);
+                }
+                bounds.push([p.lat, p.lon]);
+            });
+            if(bounds.length) map.fitBounds(bounds);
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('dataTableBody'); tbody.innerHTML = '';
+            const fTxt = document.getElementById('searchFilter').value.toLowerCase();
+            const fStat = document.getElementById('statusFilter').value;
+            let count = 0;
+            
+            MEMORY.processed.forEach(p => {
+                if(fTxt && !p.id.toLowerCase().includes(fTxt)) return;
+                if(fStat !== 'all' && p.status !== fStat) return;
+                count++;
+                tbody.innerHTML += `<tr class="hover:bg-blue-50 cursor-pointer border-b border-slate-50" onclick="selectPointByName('${p.id}')">
+                    <td class="p-2 font-bold">${p.id}</td>
+                    <td class="p-2 text-right">${p.n.toFixed(3)}</td><td class="p-2 text-right">${p.e.toFixed(3)}</td><td class="p-2 text-right">${p.z.toFixed(3)}</td>
+                    <td class="p-2 text-right font-bold ${p.status === 'normal'?'text-green-600':'text-red-600'}">${p.mov2d.toFixed(1)}</td>
+                    <td class="p-2 text-right">${p.dZ.toFixed(1)}</td><td class="p-2 text-right">${p.vel.toFixed(2)}</td>
+                    <td class="p-2 text-center"><span class="badge ${p.status === 'crit'?'bg-crit':(p.status === 'warn'?'bg-warn':'bg-ok')}">${p.status.toUpperCase()}</span></td>
+                </tr>`;
+            });
+            document.getElementById('tableCount').innerText = count;
+        }
+
+        window.selectPointByName = function(id) {
+            const p = MEMORY.processed.find(x => x.id === id);
+            if(!p) return;
+            document.getElementById('selPointId').innerText = id;
+            document.getElementById('valMov').innerText = p.mov2d.toFixed(1);
+            document.getElementById('valVel').innerText = p.vel.toFixed(2);
+            document.getElementById('valAz').innerText = p.az.toFixed(0);
+            document.getElementById('selStatus').className = `badge ${p.status === 'crit' ? 'bg-crit' : (p.status === 'warn' ? 'bg-warn' : 'bg-ok')}`;
+            document.getElementById('selStatus').innerText = p.status.toUpperCase();
+            updateChart(id);
+        }
+
+        function setChartMode(m) { chartMode = m; const id = document.getElementById('selPointId').innerText; if(id!='--') updateChart(id); }
+
+        function updateChart(id) {
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            const hist = MEMORY.history[id];
+            const data = hist.map(h => {
+                const dN = (h.n - hist[0].n)*1000; const dE = (h.e - hist[0].e)*1000;
+                return {x: dE, y: dN, mov: Math.sqrt(dN**2 + dE**2), label: h.date};
+            });
+            chartInstance = new Chart(ctx, {
+                type: chartMode === 'trend' ? 'line' : 'scatter',
+                data: chartMode === 'trend' ? 
+                    {labels: data.map(d=>d.label), datasets: [{label: 'Desplazamiento (mm)', data: data.map(d=>d.mov), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill:true}]} : 
+                    {datasets: [{label: 'Trayectoria (E, N)', data: data.map(d=>({x:d.x, y:d.y})), showLine: true, borderColor: '#ef4444', pointRadius:4}]},
+                options: {responsive: true, maintainAspectRatio: false}
+            });
+        }
+
+        window.exportCSV = function() {
+            let csv = "ID,Norte,Este,Cota,Mov2D_mm,DeltaZ_mm,Velocidad_mm_d,Estado\n";
+            MEMORY.processed.forEach(p => csv += `${p.id},${p.n},${p.e},${p.z},${p.mov2d.toFixed(2)},${p.dZ.toFixed(2)},${p.vel.toFixed(2)},${p.status}\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'Reporte.csv'; a.click();
+        }
+
+        window.generatePDF = async function() {
+            if(!window.pdfMake) { alert("Librerías cargando..."); return; }
+            const loader = document.getElementById('loader');
+            loader.style.display = 'flex';
+            try {
+                const controls = document.querySelectorAll('.leaflet-control');
+                controls.forEach(c => c.style.display = 'none');
+                const mapCanvas = await html2canvas(document.getElementById('map'), { useCORS: true, allowTaint: false, logging: false });
+                const mapImg = mapCanvas.toDataURL('image/png');
+                controls.forEach(c => c.style.display = 'block');
+                const chartImg = chartInstance ? chartInstance.toBase64Image() : null;
+                const sel = document.getElementById('mainProjectSel');
+                const projName = sel.options[sel.selectedIndex]?.text || 'Proyecto';
+                
+                const docDef = {
+                    pageSize: 'A4', pageOrientation: 'landscape', pageMargins: [30, 30, 30, 30],
+                    header: { text: 'VV SURVEY TECH - REPORTE DE MONITOREO', style: 'brand', margin: [30, 10, 0, 0] },
+                    content: [
+                        { text: projName, style: 'title' },
+                        { text: 'EVIDENCIA GRÁFICA', style: 'h2' },
+                        { columns: [ { image: mapImg, width: 450 }, { width: '40%', stack: [ { text:'Gráfica de Tendencia', style:'label'}, chartImg ? { image: chartImg, width: 250 } : {text:'Sin Datos'} ] } ] },
+                        { text: 'MATRIZ DE DATOS', style: 'h2', pageBreak: 'before' },
+                        { table: { headerRows: 1, widths: ['auto','auto','auto','auto','*','auto','auto','auto'],
+                                body: [ [{text:'ID', style:'th'}, 'Norte', 'Este', 'Cota', 'Mov 2D', 'Delta Z', 'Vel', 'Estado'],
+                                    ...MEMORY.processed.map(p => [ {text: p.id, bold:true}, p.n.toFixed(3), p.e.toFixed(3), p.z.toFixed(3), {text: p.mov2d.toFixed(1), color: p.status==='crit'?'red':'black', bold:true}, p.dZ.toFixed(1), p.vel.toFixed(2), {text: p.status.toUpperCase(), color: p.status==='crit'?'red':(p.status==='warn'?'orange':'green'), bold:true} ]) ]
+                            }, layout: 'lightHorizontalLines' }
+                    ],
+                    styles: { brand: { fontSize: 10, color: 'gray', bold: true }, title: { fontSize: 22, bold: true, color: '#1e3a8a', margin: [0, 0, 0, 10] }, h2: { fontSize: 14, bold: true, color: '#1e40af', margin: [0, 10, 0, 5] }, label: { fontSize: 10, bold: true, color: 'gray' }, th: { bold: true, fillColor: '#1e3a8a', color: 'white' } }
+                };
+                pdfMake.createPdf(docDef).download(`Informe_${projName}.pdf`);
+            } catch(e) { console.error(e); alert("Error PDF: " + e.message); } 
+            finally { loader.style.display = 'none'; }
+        }
+    </script>
+</body>
+</html>

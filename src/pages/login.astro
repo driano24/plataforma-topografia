@@ -1,0 +1,142 @@
+---
+// src/pages/login.astro
+// PÁGINA DE ACCESO: Puerta de entrada con redirección inteligente según Roles
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | VVST</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-950 flex items-center justify-center h-screen">
+
+    <div class="w-full max-w-sm p-8">
+        
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg shadow-blue-900/50 text-white text-2xl font-black">
+                VV
+            </div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Bienvenido</h1>
+            <p class="text-slate-500 text-sm">Ingrese sus credenciales de acceso</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-400 uppercase ml-1">Usuario</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-user text-slate-600"></i>
+                    </div>
+                    <input type="text" name="username" class="w-full bg-slate-900 border border-slate-800 text-white text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-3 placeholder-slate-600 outline-none transition focus:bg-slate-800" placeholder="Ej. operador1" required>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-400 uppercase ml-1">Contraseña</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-lock text-slate-600"></i>
+                    </div>
+                    <input type="password" name="password" class="w-full bg-slate-900 border border-slate-800 text-white text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-3 placeholder-slate-600 outline-none transition focus:bg-slate-800" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-800 font-bold rounded-xl text-sm px-5 py-3.5 text-center shadow-lg shadow-blue-900/30 transition transform active:scale-95">
+                INGRESAR
+            </button>
+
+            <div id="errorMsg" class="hidden p-3 bg-red-900/30 border border-red-900/50 text-red-400 text-xs rounded-lg text-center font-bold"></div>
+
+        </form>
+
+        <p class="mt-10 text-center text-xs text-slate-600">
+            &copy; 2026 VV Survey Tech. <br> Plataforma Segura.
+        </p>
+    </div>
+
+    <script is:inline>
+        // Limpiar sesión anterior al entrar
+        localStorage.clear();
+
+        const form = document.getElementById('loginForm');
+        const errorDiv = document.getElementById('errorMsg');
+        const btn = form.querySelector('button');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // UI Loading
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> VERIFICANDO...';
+            btn.disabled = true;
+            errorDiv.classList.add('hidden');
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+
+            try {
+                const response = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    // 1. Guardar Datos de Sesión
+                    localStorage.setItem('vvst_user', result.user.username);
+                    localStorage.setItem('vvst_role', result.user.role);
+                    
+                    // ----------------------------------------------------
+                    // 2. EL RUTEO INTELIGENTE
+                    // ----------------------------------------------------
+                    
+                    if (result.user.role === 'admin') {
+                        // El JEFE -> Panel de Control Global
+                        window.location.href = '/admin';
+                        
+                    } else if (result.user.role === 'manager') {
+                        // El GERENTE -> Panel de Gestión de Proyectos
+                        window.location.href = '/admin/monitoring';
+
+                    } else if (result.user.role === 'operator') {
+                        // El OPERADOR -> Directo a la App de Campo (field.astro)
+                        window.location.href = '/field'; 
+                        
+                    } else {
+                        // EL CLIENTE (Viewer) -> Directo a ver Mapas
+                        window.location.href = '/viewer';
+                    }
+                    // ----------------------------------------------------
+
+                } else {
+                    showError(result.message || "Credenciales incorrectas");
+                }
+
+            } catch (error) {
+                console.error(error);
+                showError("Error de conexión con el servidor");
+            } finally {
+                // Si falló, restaurar botón
+                if(!window.location.href.includes('/')) { 
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            }
+        });
+
+        function showError(msg) {
+            errorDiv.innerText = msg;
+            errorDiv.classList.remove('hidden');
+            btn.innerText = "INGRESAR";
+            btn.disabled = false;
+        }
+    </script>
+
+</body>
+</html>

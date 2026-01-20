@@ -1,11 +1,223 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// src/pages/index.astro
+// PLATAFORMA INTEGRAL: Landing Page Pública
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VVST | Ecosistema de Ingeniería</title>
+    <meta name="description" content="Suite integral de herramientas para geomática, topografía e ingeniería civil.">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body { font-family: 'Roboto', sans-serif; }
+        
+        .hero-bg {
+            background-color: #0f172a;
+            background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 58, 138, 0.8) 100%), url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .module-card {
+            transition: all 0.3s ease;
+        }
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .badge-soon {
+            background: #e2e8f0; color: #64748b; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .badge-active {
+            background: #dcfce7; color: #166534; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-200">
+
+    <nav class="fixed w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center text-white font-black text-xl shadow-lg">VV</div>
+                <div class="text-white hidden sm:block">
+                    <h1 class="text-lg font-black leading-none tracking-tight">VV SURVEY TECH</h1>
+                    <p class="text-[9px] text-slate-400 font-bold tracking-[0.2em] uppercase">Integrated Platform</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-8">
+                <div class="hidden md:flex gap-6 text-sm font-medium text-slate-300">
+                    <a href="#catalogo" class="hover:text-white transition">Catálogo de Módulos</a>
+                    <a href="#empresa" class="hover:text-white transition">Empresa</a>
+                </div>
+                
+                <div id="auth-btn-area">
+                    <a href="/login" class="bg-white text-slate-900 hover:bg-blue-50 text-xs font-bold px-5 py-2.5 rounded-full transition shadow-lg flex items-center gap-2">
+                        <i class="fas fa-user-circle"></i> ACCESO CLIENTES
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero-bg min-h-screen flex items-center justify-center text-center px-6 pt-20">
+        <div class="max-w-5xl mx-auto">
+            <div class="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-600 backdrop-blur-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-slate-300 text-xs font-bold tracking-widest uppercase">Ecosistema VVST v3.0</span>
+            </div>
+            
+            <h1 class="text-5xl md:text-7xl font-black text-white mb-8 leading-tight tracking-tight">
+                Ingeniería, Datos y Gestión <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400">Todo en un solo lugar.</span>
+            </h1>
+            
+            <p class="text-lg md:text-xl text-slate-300 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
+                Acceda a una suite completa de herramientas modulares para geomática. 
+                Desde monitoreo estructural hasta gestión de activos. 
+                Active solo lo que su proyecto necesita.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#catalogo" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-4 rounded-xl transition shadow-xl shadow-blue-900/50 flex items-center justify-center gap-3">
+                    Explorar Módulos <i class="fas fa-th-large"></i>
+                </a>
+                <a href="/login" class="bg-slate-800 border border-slate-600 text-white font-bold px-8 py-4 rounded-xl hover:bg-slate-700 transition flex items-center justify-center gap-3">
+                    Tengo una Licencia <i class="fas fa-key"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <section id="catalogo" class="py-24 bg-slate-50 relative">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-black text-slate-900 mb-4">Nuestra Suite de Aplicaciones</h2>
+                <p class="text-slate-500 max-w-2xl mx-auto">Una plataforma, múltiples soluciones. Gestione sus licencias y acceda a las herramientas contratadas.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <div class="module-card bg-white rounded-2xl p-1 shadow-sm border border-slate-200 h-full flex flex-col">
+                    <div class="bg-slate-100 rounded-xl h-48 flex items-center justify-center relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-blue-900/10 group-hover:bg-blue-900/5 transition"></div>
+                        <i class="fas fa-satellite-dish text-6xl text-blue-600 group-hover:scale-110 transition duration-500"></i>
+                        <span class="absolute top-4 right-4 badge-active">DISPONIBLE</span>
+                    </div>
+                    <div class="p-6 flex-1 flex flex-col">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-slate-900">Geotechnical Monitor</h3>
+                            <i class="fas fa-cube text-slate-300"></i>
+                        </div>
+                        <p class="text-slate-500 text-sm mb-6 flex-1">
+                            Sistema avanzado para el control de desplazamientos en taludes y estructuras. Gráficas de tendencia y mapas vectoriales.
+                        </p>
+                        <a href="/dashboard" class="w-full block text-center bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-sm">
+                            ACCEDER AL MÓDULO
+                        </a>
+                    </div>
+                </div>
+
+                <div class="module-card bg-white rounded-2xl p-1 shadow-sm border border-slate-200 h-full flex flex-col opacity-75 hover:opacity-100 transition">
+                    <div class="bg-slate-50 rounded-xl h-48 flex items-center justify-center relative">
+                        <i class="fas fa-boxes-stacked text-6xl text-slate-300"></i>
+                        <span class="absolute top-4 right-4 badge-soon">EN DESARROLLO</span>
+                    </div>
+                    <div class="p-6 flex-1 flex flex-col">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-slate-700">Asset Manager</h3>
+                            <i class="fas fa-lock text-slate-300"></i>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-6 flex-1">
+                            Control de inventarios para equipos topográficos, calibraciones y asignación de personal.
+                        </p>
+                        <button disabled class="w-full block text-center bg-slate-100 text-slate-400 font-bold py-3 rounded-lg cursor-not-allowed text-sm">
+                            PRÓXIMAMENTE
+                        </button>
+                    </div>
+                </div>
+
+                <div class="module-card bg-white rounded-2xl p-1 shadow-sm border border-slate-200 h-full flex flex-col opacity-75 hover:opacity-100 transition">
+                    <div class="bg-slate-50 rounded-xl h-48 flex items-center justify-center relative">
+                        <i class="fas fa-calculator text-6xl text-slate-300"></i>
+                        <span class="absolute top-4 right-4 badge-soon">EN DESARROLLO</span>
+                    </div>
+                    <div class="p-6 flex-1 flex flex-col">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-slate-700">GeoCalc Pro</h3>
+                            <i class="fas fa-lock text-slate-300"></i>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-6 flex-1">
+                            Conversión de coordenadas (MAGNA-SIRGAS, WGS84) y cálculos geodésicos en la nube.
+                        </p>
+                        <button disabled class="w-full block text-center bg-slate-100 text-slate-400 font-bold py-3 rounded-lg cursor-not-allowed text-sm">
+                            PRÓXIMAMENTE
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-gradient-to-r from-slate-900 to-blue-900 text-white">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="text-3xl font-black mb-6">¿Necesita una solución a medida?</h2>
+            <p class="text-blue-100 mb-10 text-lg">
+                Como administradores globales, podemos configurar licencias temporales, accesos por proyecto y módulos específicos para su empresa.
+            </p>
+            <div class="flex justify-center gap-4">
+                <a href="mailto:admin@vvst.com" class="bg-white text-blue-900 font-bold px-8 py-3 rounded-full hover:bg-blue-50 transition shadow-lg">
+                    Contactar Ventas
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-slate-950 text-slate-500 py-10 text-center text-xs border-t border-slate-900">
+        <p>&copy; 2026 VV SURVEY TECH. Todos los derechos reservados.</p>
+        <p class="mt-2">Plataforma Modular V 3.0.0</p>
+    </footer>
+
+    <script is:inline>
+        const user = localStorage.getItem('vvst_user');
+        const role = localStorage.getItem('vvst_role');
+        const container = document.getElementById('auth-btn-area');
+
+        if (user) {
+            // LÓGICA DE RUTEO ACTUALIZADA:
+            
+            let btnText = 'MI DASHBOARD';
+            let targetUrl = '/dashboard'; // Default: El Hub Central
+            let icon = 'fas fa-th-large';
+            let btnClass = 'bg-blue-600 hover:bg-blue-500';
+
+            // Si es Super Admin, lo mandamos a su oficina (Panel Global)
+            if (role === 'admin') {
+                btnText = 'PANEL GLOBAL';
+                targetUrl = '/admin'; 
+                icon = 'fas fa-user-shield';
+                btnClass = 'bg-purple-600 hover:bg-purple-500';
+            }
+
+            container.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <span class="text-xs text-slate-400 hidden md:block font-bold">Hola, ${user}</span>
+                    <a href="${targetUrl}" class="${btnClass} text-white text-xs font-bold px-6 py-2.5 rounded-full transition shadow-lg flex items-center gap-2">
+                        <i class="${icon}"></i> ${btnText}
+                    </a>
+                </div>
+            `;
+        }
+    </script>
+
+</body>
+</html>

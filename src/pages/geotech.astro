@@ -1,0 +1,67 @@
+---
+// src/pages/geotech.astro
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geomonitor | VV Survey Tech</title>
+</head>
+<body class="bg-slate-950 text-white font-sans h-screen flex flex-col items-center justify-center relative overflow-hidden">
+
+    <div class="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-600 rounded-full blur-[120px]"></div>
+    </div>
+
+    <div class="z-10 text-center max-w-4xl w-full px-6">
+        
+        <a href="/" class="absolute top-8 left-8 text-slate-500 hover:text-white text-sm font-bold flex items-center gap-2 transition">
+            ← Volver al Hub General
+        </a>
+
+        <div class="mb-12">
+            <div class="inline-block p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-900 shadow-2xl shadow-blue-900/50 mb-4">
+                <span class="text-4xl">🛰️</span>
+            </div>
+            <h1 class="text-5xl font-extrabold tracking-tight mb-2">GEOMONITOR <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">PRO</span></h1>
+            <p class="text-slate-400 text-lg">Suite de Monitoreo Geotécnico</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <a href="/admin" class="group relative bg-slate-900/50 border border-slate-800 hover:border-blue-500 rounded-2xl p-8 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 backdrop-blur-sm">
+                <div class="bg-blue-900/30 w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition text-blue-400">
+                    💻
+                </div>
+                <h3 class="text-xl font-bold mb-2">Panel Admin</h3>
+                <p class="text-sm text-slate-500">Gestión de proyectos, usuarios y bases de datos.</p>
+            </a>
+
+            <a href="/geomonitor" class="group relative bg-slate-900/50 border border-slate-800 hover:border-emerald-500 rounded-2xl p-8 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-900/20 backdrop-blur-sm">
+                <div class="bg-emerald-900/30 w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition text-emerald-400">
+                    👷‍♂️
+                </div>
+                <h3 class="text-xl font-bold mb-2">App de Campo</h3>
+                <p class="text-sm text-slate-500">Interfaz móvil para operadores y registro de datos.</p>
+            </a>
+
+            <a href="/viewer" class="group relative bg-slate-900/50 border border-slate-800 hover:border-purple-500 rounded-2xl p-8 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-purple-900/20 backdrop-blur-sm">
+                <div class="bg-purple-900/30 w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition text-purple-400">
+                    🌍
+                </div>
+                <h3 class="text-xl font-bold mb-2">Project Viewer</h3>
+                <p class="text-sm text-slate-500">Dashboard interactivo, mapas y gráficas para clientes.</p>
+            </a>
+
+        </div>
+
+        <footer class="mt-16 text-slate-600 text-xs">
+            &copy; 2026 VV Survey Tech S.A.S. • Módulo Geotecnia v2.0
+        </footer>
+
+    </div>
+
+</body>
+</html>

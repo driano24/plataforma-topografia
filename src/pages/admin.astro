@@ -1,0 +1,404 @@
+---
+// src/pages/admin.astro
+// SUPER ADMIN V2: Gestión Total (Perfiles, Claves, Licencias)
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Global Admin | VVST</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans h-screen flex overflow-hidden">
+
+    <script is:inline>
+        const role = localStorage.getItem('vvst_role');
+        if (role !== 'admin') window.location.href = '/dashboard';
+    </script>
+
+    <div class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col z-50 shadow-2xl">
+        <div class="p-6 border-b border-slate-800">
+            <h5 class="font-black text-white text-xl tracking-tight flex items-center gap-2">
+                <span class="text-purple-500 text-2xl">❖</span> GLOBAL
+            </h5>
+            <small class="text-slate-500 text-xs uppercase tracking-widest">Master Suite</small>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2">
+            <div class="px-4 py-2 bg-purple-900/10 border border-purple-900/30 rounded-xl text-purple-400 font-bold flex items-center gap-3">
+                <i class="fas fa-building"></i> Gestión Clientes
+            </div>
+            
+            <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Accesos Técnicos</p>
+            <a href="/admin/monitoring" class="block px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-sm transition">
+                <i class="fas fa-satellite-dish w-5"></i> Ir a Monitor
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-slate-800">
+            <a href="/dashboard" class="block text-center w-full py-2 mb-2 rounded-lg border border-slate-700 text-slate-400 hover:text-white text-sm transition">
+                <i class="fas fa-th-large me-2"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="flex-1 bg-slate-950 p-10 overflow-y-auto">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-white">Directorio de Clientes</h2>
+                    <p class="text-slate-400 text-sm mt-1">Gestión de perfiles, seguridad y licenciamiento.</p>
+                </div>
+                <button onclick="openModal('modalCreate')" class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-purple-900/20 flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Nuevo Cliente
+                </button>
+            </div>
+
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-950 text-slate-400 text-xs uppercase font-bold border-b border-slate-800">
+                        <tr>
+                            <th class="p-4">Usuario</th>
+                            <th class="p-4">Empresa</th>
+                            <th class="p-4">Rol</th>
+                            <th class="p-4">Licencias Activas</th>
+                            <th class="p-4 text-right">Gestión</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable" class="text-sm divide-y divide-slate-800 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCreate" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl h-auto max-h-[90vh] overflow-y-auto">
+            
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-white">Alta de Cliente</h3>
+                <button onclick="closeModals()" class="text-slate-500 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="flex border-b border-slate-700 mb-6">
+                <button onclick="switchTab('new_company')" id="tab-company" class="flex-1 pb-3 text-sm font-bold text-purple-400 border-b-2 border-purple-500">🏢 Nueva Empresa</button>
+                <button onclick="switchTab('new_user')" id="tab-user" class="flex-1 pb-3 text-sm font-bold text-slate-500 hover:text-white">👤 Usuario en Empresa</button>
+            </div>
+
+            <form id="formNewCompany" class="space-y-4">
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                    <p class="text-[10px] uppercase font-bold text-blue-400 mb-3">Datos Jurídicos</p>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="text" name="company_name" placeholder="Razón Social" class="input-dark" required>
+                        <input type="text" name="nit" placeholder="NIT / ID Fiscal" class="input-dark" required>
+                    </div>
+                    <input type="text" name="address" placeholder="Dirección Física" class="input-dark w-full">
+                </div>
+
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                    <p class="text-[10px] uppercase font-bold text-emerald-400 mb-3">Gerente Principal</p>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="text" name="first_name" placeholder="Nombres" class="input-dark" required>
+                        <input type="text" name="last_name" placeholder="Apellidos" class="input-dark" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="email" name="email" placeholder="Correo Electrónico" class="input-dark" required>
+                        <input type="text" name="phone" placeholder="Teléfono" class="input-dark">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" name="username" placeholder="Usuario Acceso" class="input-dark" required>
+                        <input type="password" name="password" placeholder="Contraseña" class="input-dark" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary w-full">Registrar Todo</button>
+            </form>
+
+            <form id="formNewUser" class="space-y-4 hidden">
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Empresa</label>
+                    <select id="companySelect" name="company_id" class="input-dark w-full" required><option>Cargando...</option></select>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="text" name="first_name" placeholder="Nombres" class="input-dark" required>
+                        <input type="text" name="last_name" placeholder="Apellidos" class="input-dark" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="email" name="email" placeholder="Correo" class="input-dark" required>
+                        <input type="text" name="phone" placeholder="Teléfono" class="input-dark">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="text" name="username" placeholder="Usuario" class="input-dark" required>
+                        <input type="password" name="password" placeholder="Contraseña" class="input-dark" required>
+                    </div>
+                    
+                    <select name="role" class="input-dark w-full bg-blue-900/10 border-blue-500/50 text-blue-200 font-bold">
+                        <option value="manager">👑 Gerente / Admin de Proyecto</option>
+                        <option value="operator">👷 Operador (Técnico)</option>
+                        <option value="client">👀 Visualizador (Cliente Final)</option>
+                    </select>
+
+                </div>
+                <button type="submit" class="btn-primary w-full">Crear Usuario</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEdit" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-4">Editar Perfil</h3>
+            <form id="formEditUser" class="space-y-4">
+                <input type="hidden" name="id" id="editId">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" name="first_name" id="editName" placeholder="Nombres" class="input-dark">
+                    <input type="text" name="last_name" id="editLast" placeholder="Apellidos" class="input-dark">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="email" name="email" id="editEmail" placeholder="Email" class="input-dark">
+                    <input type="text" name="phone" id="editPhone" placeholder="Teléfono" class="input-dark">
+                </div>
+                
+                <hr class="border-slate-800">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] text-slate-500 font-bold uppercase">Usuario</label>
+                        <input type="text" name="username" id="editUser" class="input-dark w-full">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 font-bold uppercase">Rol</label>
+                        <select name="role" id="editRole" class="input-dark w-full">
+                            <option value="admin">Global Admin</option>
+                            <option value="manager">Gerente / Manager</option> <option value="operator">Operador</option>
+                            <option value="client">Cliente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-red-900/10 border border-red-900/30 p-3 rounded-lg">
+                    <label class="text-[10px] text-red-400 font-bold uppercase block mb-1">Cambiar Contraseña (Opcional)</label>
+                    <input type="password" name="password" placeholder="Dejar vacío para no cambiar" class="bg-slate-950 border border-red-900/30 rounded p-2 text-white text-sm w-full outline-none focus:border-red-500">
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeModals()" class="bg-slate-800 text-slate-400 py-2 px-4 rounded font-bold text-sm">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded font-bold text-sm flex-1">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalLicense" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl border-t-4 border-emerald-500">
+            <h3 class="text-xl font-bold text-white">Gestor de Licencias</h3>
+            <p class="text-xs text-slate-400 mb-4">Usuario: <span id="licUserName" class="text-white font-bold">...</span></p>
+            
+            <div class="mb-4">
+                <p class="text-[10px] uppercase font-bold text-slate-500 mb-2">Licencias Activas</p>
+                <div id="activeLicensesList" class="space-y-2"></div>
+            </div>
+
+            <hr class="border-slate-800 mb-4">
+
+            <form id="formLicense" class="space-y-3">
+                <input type="hidden" id="licUserId" name="user_id">
+                
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Módulo</label>
+                    <select name="module_code" class="input-dark w-full">
+                        <option value="geo_mon">📡 Geotechnical Monitor</option>
+                        <option value="asset_mgr">📦 Asset Manager</option>
+                        <option value="geo_calc">🧮 GeoCalc Pro</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Vence el:</label>
+                    <input type="date" name="expiration_date" id="licDate" class="input-dark w-full text-slate-400" required>
+                </div>
+
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded font-bold text-sm">
+                    <i class="fas fa-plus-circle"></i> Agregar / Renovar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .input-dark { @apply bg-slate-950 border border-slate-600 rounded-lg p-2.5 text-white text-xs w-full outline-none focus:border-blue-500; }
+        .btn-primary { @apply bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-lg font-bold text-sm shadow-lg transition; }
+    </style>
+
+    <script is:inline>
+        // --- CARGAR USUARIOS ---
+        async function loadUsers() {
+            const tb = document.getElementById('usersTable');
+            try {
+                const res = await fetch('/api/admin-global', { method: 'POST', body: JSON.stringify({ action: 'list_users' }) });
+                const data = await res.json();
+                tb.innerHTML = '';
+
+                if (data.status === 'success') {
+                    data.users.forEach(u => {
+                        let licensesHtml = '<span class="text-slate-600 italic text-xs">Sin acceso</span>';
+                        if (u.licencias_raw) {
+                            licensesHtml = u.licencias_raw.split(';;').map(raw => {
+                                const [code, name, date] = raw.split('|');
+                                const shortDate = date ? date.split('T')[0] : 'Inf';
+                                return `<span class="inline-flex items-center gap-1 bg-emerald-900/30 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-900/50 mr-1 mb-1 cursor-help" title="Vence: ${shortDate}">
+                                    ${name} <span class="opacity-50 text-[9px] ml-1">(${shortDate})</span>
+                                </span>`;
+                            }).join('');
+                        }
+
+                        let companyBadge = u.company_name 
+                            ? `<span class="text-blue-300 font-bold flex items-center gap-1"><i class="fas fa-building"></i> ${u.company_name}</span>`
+                            : `<span class="text-purple-400 font-bold italic">Global Admin</span>`;
+
+                        let fullName = (u.first_name || '') + ' ' + (u.last_name || '');
+                        if(fullName.trim() === '') fullName = 'Sin Nombre';
+
+                        tb.innerHTML += `
+                            <tr class="hover:bg-slate-900/50 border-b border-slate-800/50 transition">
+                                <td class="p-4">
+                                    <div class="font-bold text-white text-sm">${u.username}</div>
+                                    <div class="text-[10px] text-slate-500">${fullName}</div>
+                                </td>
+                                <td class="p-4 text-xs">${companyBadge}</td>
+                                <td class="p-4"><span class="bg-slate-800 text-slate-300 px-2 py-1 rounded text-[10px] uppercase font-bold border border-slate-700">${u.role}</span></td>
+                                <td class="p-4 text-xs">${licensesHtml}</td>
+                                <td class="p-4 text-right flex justify-end gap-2">
+                                    <button onclick="openEdit(${u.id})" class="text-blue-400 hover:text-white text-xs bg-blue-900/20 px-2 py-1 rounded border border-blue-900/50" title="Editar Perfil"><i class="fas fa-edit"></i></button>
+                                    <button onclick="openLicenseModal(${u.id}, '${u.username}', '${u.licencias_raw || ''}')" class="text-emerald-400 hover:text-white text-xs bg-emerald-900/20 px-2 py-1 rounded border border-emerald-900/50" title="Licencias"><i class="fas fa-key"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // --- GESTIÓN DE MODALES ---
+        async function openEdit(id) {
+            const res = await fetch('/api/admin-global', { method: 'POST', body: JSON.stringify({ action: 'get_user', id }) });
+            const data = await res.json();
+            if(data.status === 'success') {
+                const u = data.user;
+                document.getElementById('editId').value = u.id;
+                document.getElementById('editName').value = u.first_name || '';
+                document.getElementById('editLast').value = u.last_name || '';
+                document.getElementById('editEmail').value = u.email || '';
+                document.getElementById('editPhone').value = u.phone || '';
+                document.getElementById('editUser').value = u.username;
+                document.getElementById('editRole').value = u.role;
+                document.getElementById('modalEdit').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('formEditUser').onsubmit = async (e) => {
+            e.preventDefault();
+            const body = Object.fromEntries(new FormData(e.target));
+            body.action = 'update_user';
+            const res = await fetch('/api/admin-global', { method: 'POST', body: JSON.stringify(body) });
+            const json = await res.json();
+            if(json.status === 'success') {
+                closeModals(); loadUsers(); alert("Perfil actualizado");
+            } else alert("Error: " + json.message);
+        };
+
+        function openLicenseModal(id, name, rawLicenses) {
+            document.getElementById('licUserId').value = id;
+            document.getElementById('licUserName').innerText = name;
+            const d = new Date(); d.setFullYear(d.getFullYear() + 1);
+            document.getElementById('licDate').value = d.toISOString().split('T')[0];
+
+            const listDiv = document.getElementById('activeLicensesList');
+            listDiv.innerHTML = '';
+            
+            if(rawLicenses) {
+                rawLicenses.split(';;').forEach(raw => {
+                    const [code, modName, expDate] = raw.split('|');
+                    const shortDate = expDate.split('T')[0];
+                    listDiv.innerHTML += `
+                        <div class="flex justify-between items-center bg-slate-950 p-2 rounded border border-slate-800">
+                            <div>
+                                <div class="text-xs font-bold text-white">${modName}</div>
+                                <div class="text-[9px] text-slate-500">Expira: ${shortDate}</div>
+                            </div>
+                            <button type="button" onclick="revokeLicense(${id}, '${code}')" class="text-red-500 hover:text-white px-2 text-xs" title="Revocar"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                });
+            } else {
+                listDiv.innerHTML = '<div class="text-[10px] text-slate-600 text-center">Sin licencias activas</div>';
+            }
+            document.getElementById('modalLicense').classList.remove('hidden');
+        }
+
+        async function revokeLicense(userId, moduleCode) {
+            if(!confirm("¿Retirar acceso a este módulo?")) return;
+            await fetch('/api/admin-global', { 
+                method: 'POST', body: JSON.stringify({ action: 'revoke_license', user_id: userId, module_code: moduleCode }) 
+            });
+            closeModals(); loadUsers();
+        }
+
+        document.getElementById('formLicense').onsubmit = async (e) => {
+            e.preventDefault();
+            const body = Object.fromEntries(new FormData(e.target));
+            body.action = 'grant_license';
+            await fetch('/api/admin-global', { method: 'POST', body: JSON.stringify(body) });
+            closeModals(); loadUsers(); alert("Licencia actualizada");
+        };
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModals() { 
+            document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden')); 
+        }
+
+        function switchTab(tab) {
+            if (tab === 'new_company') {
+                document.getElementById('formNewCompany').classList.remove('hidden');
+                document.getElementById('formNewUser').classList.add('hidden');
+                document.getElementById('tab-company').className = "flex-1 pb-3 text-sm font-bold text-purple-400 border-b-2 border-purple-500 transition";
+                document.getElementById('tab-user').className = "flex-1 pb-3 text-sm font-bold text-slate-500 hover:text-white transition";
+            } else {
+                document.getElementById('formNewCompany').classList.add('hidden');
+                document.getElementById('formNewUser').classList.remove('hidden');
+                document.getElementById('tab-company').className = "flex-1 pb-3 text-sm font-bold text-slate-500 hover:text-white transition";
+                document.getElementById('tab-user').className = "flex-1 pb-3 text-sm font-bold text-blue-400 border-b-2 border-blue-500 transition";
+                loadCompaniesDropdown();
+            }
+        }
+
+        async function loadCompaniesDropdown() {
+            const sel = document.getElementById('companySelect');
+            const res = await fetch('/api/admin-global', { method: 'POST', body: JSON.stringify({ action: 'list_companies' }) });
+            const data = await res.json();
+            sel.innerHTML = '<option value="">-- Seleccione Empresa --</option>';
+            data.companies.forEach(c => sel.add(new Option(c.name, c.id)));
+        }
+
+        document.getElementById('formNewCompany').onsubmit = async (e) => {
+            e.preventDefault();
+            const body = Object.fromEntries(new FormData(e.target)); body.action = 'create_company_full';
+            const res = await fetch('/api/admin-global', { method: 'POST', body: JSON.stringify(body) });
+            const json = await res.json();
+            if(json.status === 'success') { closeModals(); loadUsers(); alert("Registrado exitosamente"); }
+            else alert("Error: " + json.message);
+        };
+
+        document.getElementById('formNewUser').onsubmit = async (e) => {
+            e.preventDefault();
+            const body = Object.fromEntries(new FormData(e.target)); body.action = 'create_user';
+            const res = await fetch('/api/admin-global', { method: 'POST', body: JSON.stringify(body) });
+            const json = await res.json();
+            if(json.status === 'success') { closeModals(); loadUsers(); alert("Usuario creado"); }
+            else alert("Error: " + json.message);
+        };
+
+        loadUsers();
+    </script>
+</body>
+</html>

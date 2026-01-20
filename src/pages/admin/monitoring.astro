@@ -1,0 +1,491 @@
+---
+// src/pages/admin/monitoring.astro
+// GESTIÓN TÉCNICA: Módulo Geotechnical Monitor (Proyectos, Campañas y Datos)
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Admin | VVST</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .modal-window { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .active-nav { border-right: 3px solid #3b82f6; background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans overflow-hidden">
+
+    <script is:inline>
+        const user = localStorage.getItem('vvst_user');
+        const role = localStorage.getItem('vvst_role');
+
+        // 1. Si no hay usuario -> Al Login
+        if (!user) window.location.href = '/login';
+        
+        // 2. SEGURIDAD ACTUALIZADA:
+        // Aceptamos: admin (Dueño), operator (Técnico) y manager (Cliente Jefe)
+        if (role !== 'admin' && role !== 'operator' && role !== 'manager') {
+            alert("⛔ Solo personal técnico o administrativo puede acceder aquí.");
+            window.location.href = '/viewer';
+        }
+    </script>
+
+    <div class="fixed top-0 left-0 w-64 h-full bg-slate-900 border-r border-slate-800 flex flex-col z-50 shadow-2xl">
+        <div class="p-6 border-b border-slate-800">
+            <h5 class="font-extrabold text-white text-xl tracking-tight flex items-center gap-2">
+                <i class="fas fa-satellite-dish text-blue-500"></i> MONITOR
+            </h5>
+            <small id="roleLabel" class="text-slate-500 text-xs block mt-1 font-mono uppercase">Gestión Técnica</small>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-2 mb-1">Tu Espacio de Trabajo</p>
+            
+            <button onclick="showSection('projects')" class="nav-item w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-3 font-medium active-nav">
+                <i class="fas fa-folder w-5"></i> Mis Proyectos
+            </button>
+            <button onclick="showSection('campaigns')" class="nav-item w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-3 font-medium">
+                <i class="fas fa-calendar-alt w-5"></i> Campañas
+            </button>
+            <button onclick="showSection('data')" class="nav-item w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-3 font-medium">
+                <i class="fas fa-database w-5"></i> Carga de Datos
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-800 bg-slate-900/50">
+            <div class="mb-3 px-2">
+                <p class="text-[10px] text-slate-500 uppercase font-bold">Conectado como:</p>
+                <p class="text-sm font-bold text-white truncate" id="userDisplay">...</p>
+            </div>
+            <a href="/dashboard" class="block text-center w-full py-2 mb-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white text-sm transition">
+                <i class="fas fa-th-large me-2"></i> Volver al Hub
+            </a>
+            <button onclick="logout()" class="w-full py-2 rounded-lg bg-red-900/10 text-red-400 hover:bg-red-900/30 text-sm font-bold transition flex items-center justify-center gap-2">
+                <i class="fas fa-power-off"></i> Salir
+            </button>
+        </div>
+    </div>
+
+    <div class="ml-64 p-10 min-h-screen bg-slate-950">
+
+        <div id="sec-projects" class="section-content">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-white tracking-tight">Mis Proyectos</h2>
+                    <p class="text-slate-400 text-sm mt-1">Administra frentes de obra, clientes y logotipos.</p>
+                </div>
+                <button onclick="openModal('modalProject')" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Nuevo Proyecto
+                </button>
+            </div>
+            
+            <div id="projectsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="col-span-3 text-center py-20">
+                    <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-campaigns" class="section-content hidden">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-white tracking-tight">Campañas de Monitoreo</h2>
+                    <p class="text-slate-400 text-sm mt-1">Gestión de jornadas de campo y lecturas.</p>
+                </div>
+                <button onclick="openModal('modalCampaign')" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Nueva Campaña
+                </button>
+            </div>
+
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 mb-6 shadow-sm">
+                <label class="text-xs font-bold text-slate-500 uppercase block mb-2 tracking-wider">Seleccionar Proyecto</label>
+                <select id="campProjectSel" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 transition" onchange="loadCampaigns()"></select>
+            </div>
+
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-950 text-slate-400 text-xs uppercase font-bold border-b border-slate-800">
+                        <tr>
+                            <th class="p-4">Nombre Campaña</th>
+                            <th class="p-4">Fecha Creación</th>
+                            <th class="p-4">Estado</th>
+                            <th class="p-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campaignsTable" class="text-sm divide-y divide-slate-800"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="sec-data" class="section-content hidden">
+            <div class="flex justify-between items-end mb-6">
+                <h2 class="text-3xl font-bold text-white tracking-tight">Carga de Datos</h2>
+            </div>
+
+            <div class="grid grid-cols-12 gap-6 h-[calc(100vh-150px)]">
+                
+                <div class="col-span-12 lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 h-fit shadow-lg">
+                    <h6 class="font-bold text-emerald-400 mb-6 flex items-center gap-2 border-b border-slate-800 pb-4">
+                        <i class="fas fa-file-csv text-xl"></i> Procesador CSV
+                    </h6>
+                    
+                    <form id="formUploadData" class="space-y-5">
+                        <div>
+                            <label class="text-xs text-slate-500 font-bold block mb-1 uppercase">1. Proyecto Destino</label>
+                            <select id="uploadProjectSel" name="project_id" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-emerald-500 outline-none" required onchange="loadAdminData()"></select>
+                        </div>
+                        
+                        <div>
+                            <label class="text-xs text-slate-500 font-bold block mb-1 uppercase">2. Origen Coordenadas (CRS)</label>
+                            <select name="crs_origin" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-emerald-500 outline-none" required>
+                                <option value="9377">MAGNA-SIRGAS / Nal (CTM12)</option>
+                                <option value="3116">MAGNA-SIRGAS / Bogotá</option>
+                                <option value="3117">MAGNA-SIRGAS / Este</option>
+                                <option value="3118">MAGNA-SIRGAS / Oeste</option>
+                            </select>
+                            <p class="text-[10px] text-slate-500 mt-1 flex items-center gap-1"><i class="fas fa-info-circle"></i> Conversión automática a WGS84</p>
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-slate-500 font-bold block mb-1 uppercase">3. Archivo Fuente</label>
+                            <div class="relative border-2 border-dashed border-slate-700 bg-slate-950 rounded-lg p-4 hover:border-emerald-500 transition text-center group">
+                                <input type="file" name="csvFile" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".csv" required>
+                                <i class="fas fa-cloud-upload-alt text-2xl text-slate-500 group-hover:text-emerald-400 mb-2"></i>
+                                <p class="text-xs text-slate-400 group-hover:text-white">Arrastra el CSV aquí o haz clic</p>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-bold text-sm transition shadow-lg shadow-emerald-900/20 flex justify-center items-center gap-2">
+                            <i class="fas fa-cogs"></i> PROCESAR DATOS
+                        </button>
+                    </form>
+                    <div id="uploadMsg" class="mt-4 text-center text-xs font-bold"></div>
+                </div>
+
+                <div class="col-span-12 lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col h-full overflow-hidden shadow-lg">
+                    <div class="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
+                        <h6 class="font-bold text-white flex items-center gap-2"><i class="fas fa-list"></i> Registros Recientes</h6>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-2 text-slate-500 text-xs"></i>
+                            <input type="text" id="dataSearch" class="bg-slate-800 border-none rounded-full pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 w-48 focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Buscar punto..." onkeyup="searchData()">
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-950 text-slate-400 text-xs sticky top-0 z-10 font-bold uppercase">
+                                <tr>
+                                    <th class="p-3">ID</th>
+                                    <th class="p-3">Norte</th>
+                                    <th class="p-3">Este</th>
+                                    <th class="p-3">Cota</th>
+                                    <th class="p-3">Campaña</th>
+                                    <th class="p-3 text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminDataTable" class="text-sm divide-y divide-slate-800 text-slate-300 font-mono">
+                                <tr><td colspan="6" class="p-10 text-center text-slate-600">Selecciona un proyecto para ver sus datos.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modalBackdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        
+        <div id="modalProject" class="modal-window hidden bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-4">Gestión de Proyecto</h3>
+            <form id="formProject" class="space-y-4">
+                <input type="hidden" name="id" id="pId">
+                <input type="text" name="name" id="pName" placeholder="Nombre del Proyecto" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none" required>
+                <input type="text" name="client" id="pClient" placeholder="Cliente / Empresa" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none" required>
+                <div>
+                    <label class="text-xs text-slate-500 font-bold mb-1 block">Logo (Opcional)</label>
+                    <input type="file" name="logo" class="w-full text-sm text-slate-400">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeAllModals()" class="flex-1 bg-slate-800 text-slate-300 py-2 rounded-lg font-bold text-sm hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold text-sm">Guardar</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="modalCampaign" class="modal-window hidden bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-4">Nueva Campaña</h3>
+            <input type="hidden" id="campId">
+            <input type="text" id="campName" placeholder="Nombre (ej. Jornada Octubre)" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white mb-4 outline-none focus:border-blue-500" required>
+            <div class="flex gap-2">
+                <button type="button" onclick="closeAllModals()" class="flex-1 bg-slate-800 text-slate-300 py-2 rounded-lg font-bold text-sm">Cancelar</button>
+                <button onclick="saveCampaign()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold text-sm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script is:inline>
+        const currentUser = localStorage.getItem('vvst_user') || 'Usuario';
+        const myRole = localStorage.getItem('vvst_role');
+        
+        document.getElementById('userDisplay').innerText = currentUser;
+        
+        // Etiqueta bonita del Rol
+        let roleText = 'Operador Técnico';
+        if (myRole === 'admin') roleText = 'Super Admin';
+        if (myRole === 'manager') roleText = 'Gerente de Proyecto';
+        document.getElementById('roleLabel').innerText = roleText;
+
+        let projectsCache = [];
+        let allDataCache = [];
+
+        // --- NAVEGACIÓN ---
+        function showSection(id) {
+            document.querySelectorAll('.section-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('sec-'+id).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active-nav', 'text-blue-400');
+                el.classList.add('text-slate-400');
+            });
+            event.currentTarget.classList.remove('text-slate-400');
+            event.currentTarget.classList.add('active-nav');
+
+            if(id === 'projects') loadProjects();
+            if(id === 'campaigns') loadProjectsForSelect('campProjectSel').then(loadCampaigns);
+            if(id === 'data') loadProjectsForSelect('uploadProjectSel').then(loadAdminData);
+        }
+
+        // --- 1. PROYECTOS (CON FILTRO) ---
+        async function loadProjects() {
+            const res = await fetch(`/api/admin?action=get_projects&user=${currentUser}`);
+            projectsCache = await res.json();
+            const grid = document.getElementById('projectsGrid');
+            grid.innerHTML = '';
+            
+            if(projectsCache.length === 0) grid.innerHTML = '<div class="col-span-3 text-center text-slate-500 py-10">No hay proyectos creados.</div>';
+
+            projectsCache.forEach(p => {
+                let companyBadge = p.company_name ? `<span class="text-[9px] bg-slate-800 text-slate-400 px-1 rounded ml-1">${p.company_name}</span>` : '';
+
+                grid.innerHTML += `
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-blue-500/50 transition shadow-lg group">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 bg-white rounded p-1 flex items-center justify-center shadow-inner">
+                                <img src="${p.logo_url || '/favicon.svg'}" class="max-h-full max-w-full" onerror="this.src='https://via.placeholder.com/50'">
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg group-hover:text-blue-400 transition">${p.name}</h4>
+                                <p class="text-xs text-slate-400 uppercase tracking-wide">${p.client_name} ${companyBadge}</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center border-t border-slate-800 pt-3 mt-2">
+                            <span class="text-[10px] text-slate-600 font-mono">ID: ${p.id}</span>
+                            <div class="flex gap-2 opacity-60 group-hover:opacity-100 transition">
+                                <button onclick="editProject(${p.id})" class="text-blue-400 hover:text-white text-xs font-bold border border-blue-900/50 px-3 py-1 rounded hover:bg-blue-900 transition">EDITAR</button>
+                                ${p.id != 1 ? `<button onclick="deleteProject(${p.id})" class="text-red-400 hover:text-white text-xs font-bold border border-red-900/50 px-3 py-1 rounded hover:bg-red-900 transition">BORRAR</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function saveProject(e) {
+            e.preventDefault();
+            const form = document.getElementById('formProject');
+            const fd = new FormData(form);
+            const id = document.getElementById('pId').value;
+            if(id) fd.append('id', id);
+
+            fd.append('user', currentUser); 
+
+            const action = id ? 'update_project' : 'create_project';
+            const res = await fetch(`/api/admin?action=${action}`, { method: 'POST', body: fd });
+            const d = await res.json();
+            
+            if(d.status === 'success') {
+                closeAllModals();
+                loadProjects();
+            } else alert(d.message);
+        }
+        document.getElementById('formProject').onsubmit = saveProject;
+
+        function editProject(id) {
+            const p = projectsCache.find(x => x.id == id);
+            if(!p) return;
+            document.getElementById('pId').value = p.id;
+            document.getElementById('pName').value = p.name;
+            document.getElementById('pClient').value = p.client_name;
+            openModal('modalProject');
+        }
+        
+        async function deleteProject(id) {
+            if(!confirm("⚠️ ¿Estás seguro?\nSe eliminarán todas las campañas y datos asociados.")) return;
+            await fetch('/api/admin?action=delete_project', { 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) 
+            });
+            loadProjects();
+        }
+
+        // --- 2. CAMPAÑAS ---
+        async function loadCampaigns() {
+            const pid = document.getElementById('campProjectSel').value;
+            const tb = document.getElementById('campaignsTable');
+            tb.innerHTML = '';
+            if(!pid) return;
+
+            const res = await fetch(`/api/admin?action=get_campaigns&project_id=${pid}`);
+            const data = await res.json();
+            
+            data.forEach(c => {
+                const badge = c.status === 'open' 
+                    ? `<span class="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs font-bold border border-emerald-500/30">ABIERTA</span>` 
+                    : `<span class="bg-slate-700 text-slate-400 px-2 py-1 rounded text-xs font-bold">CERRADA</span>`;
+                
+                const btnAction = c.status === 'open'
+                    ? `<button onclick="toggleCamp(${c.id}, 'closed')" class="text-amber-400 hover:text-white text-xs font-bold mr-3">CERRAR</button>`
+                    : `<button onclick="toggleCamp(${c.id}, 'open')" class="text-emerald-400 hover:text-white text-xs font-bold mr-3">ABRIR</button>`;
+
+                tb.innerHTML += `
+                    <tr class="hover:bg-slate-900/50 transition border-b border-slate-800/50">
+                        <td class="p-4 text-white font-medium">${c.name}</td>
+                        <td class="p-4 text-slate-500 text-xs font-mono">${c.created_at ? c.created_at.split('T')[0] : '-'}</td>
+                        <td class="p-4">${badge}</td>
+                        <td class="p-4 text-right">
+                            ${btnAction}
+                            <button onclick="deleteCamp(${c.id})" class="text-slate-600 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        
+        async function saveCampaign() {
+            const name = document.getElementById('campName').value;
+            const pid = document.getElementById('campProjectSel').value;
+            await fetch(`/api/admin?action=create_campaign`, { 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({project_id: pid, name}) 
+            });
+            closeAllModals(); loadCampaigns();
+        }
+        async function toggleCamp(id, status) {
+            await fetch('/api/admin?action=toggle_campaign_status', { 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, status}) 
+            });
+            loadCampaigns();
+        }
+        async function deleteCamp(id) {
+            if(confirm("¿Borrar campaña?")) {
+                await fetch('/api/admin?action=delete_campaign', { 
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) 
+                });
+                loadCampaigns();
+            }
+        }
+
+        // --- 3. DATOS ---
+        async function loadAdminData() {
+            const pid = document.getElementById('uploadProjectSel').value;
+            const tb = document.getElementById('adminDataTable');
+            if(!pid) return;
+            
+            tb.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-blue-400"><i class="fas fa-spinner fa-spin"></i> Cargando datos...</td></tr>';
+            
+            const res = await fetch(`/api/admin?action=get_data&project_id=${pid}`);
+            const json = await res.json();
+            allDataCache = json.data || [];
+            renderData(allDataCache);
+        }
+
+        function renderData(list) {
+            const tb = document.getElementById('adminDataTable');
+            tb.innerHTML = '';
+            if(list.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-600">Este proyecto no tiene datos aún.</td></tr>';
+                return;
+            }
+            
+            list.slice().reverse().slice(0, 100).forEach(d => {
+                tb.innerHTML += `
+                    <tr class="hover:bg-slate-800/50 group border-b border-slate-800/50 transition">
+                        <td class="p-3 font-bold text-white">${d.point_id}</td>
+                        <td class="p-3 text-emerald-400 font-mono">${parseFloat(d.north).toFixed(3)}</td>
+                        <td class="p-3 text-emerald-400 font-mono">${parseFloat(d.east).toFixed(3)}</td>
+                        <td class="p-3 text-blue-400 font-mono">${parseFloat(d.elevation).toFixed(3)}</td>
+                        <td class="p-3 text-xs text-slate-500">${d.campaign_name || '-'}</td>
+                        <td class="p-3 text-right">
+                             <button onclick="deleteData(${d.id})" class="text-red-500 opacity-0 group-hover:opacity-100 transition px-2 hover:bg-red-900/20 rounded">×</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById('formUploadData').onsubmit = async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('uploadMsg');
+            msg.className = "mt-4 text-center text-xs font-bold text-blue-400";
+            msg.innerHTML = '<i class="fas fa-sync fa-spin"></i> Procesando y convirtiendo coordenadas...';
+            
+            const fd = new FormData(e.target);
+            fd.append('action', 'upload_csv'); 
+
+            const res = await fetch('/api/admin', { method: 'POST', body: fd });
+            const d = await res.json();
+            
+            if(d.status === 'success') {
+                msg.className = "mt-4 text-center text-xs font-bold text-emerald-400";
+                msg.innerHTML = `✅ ¡Éxito! ${d.count} puntos cargados.`;
+                e.target.reset();
+                loadAdminData();
+            } else {
+                msg.className = "mt-4 text-center text-xs font-bold text-red-400";
+                msg.innerText = "Error: " + d.message;
+            }
+        };
+
+        async function deleteData(id) {
+            if(!confirm("¿Borrar medición puntual?")) return;
+            await fetch('/api/admin?action=delete_measurement_id', { 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) 
+            });
+            loadAdminData();
+        }
+
+        function searchData() {
+            const term = document.getElementById('dataSearch').value.toLowerCase();
+            const filtered = allDataCache.filter(d => d.point_id.toLowerCase().includes(term));
+            renderData(filtered);
+        }
+
+        // --- UTILIDADES ---
+        async function loadProjectsForSelect(id) {
+            const sel = document.getElementById(id);
+            sel.innerHTML = '';
+            if(projectsCache.length === 0) await loadProjects();
+            projectsCache.forEach(p => sel.add(new Option(p.name, p.id)));
+        }
+
+        function openModal(id) {
+            document.getElementById('modalBackdrop').classList.remove('hidden');
+            document.querySelectorAll('.modal-window').forEach(m => m.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+        function closeAllModals() {
+            document.getElementById('modalBackdrop').classList.add('hidden');
+        }
+        function logout() { localStorage.clear(); window.location.href='/'; }
+
+        // Inicializar
+        loadProjects();
+    </script>
+</body>
+</html>

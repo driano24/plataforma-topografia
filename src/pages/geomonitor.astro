@@ -1,0 +1,320 @@
+---
+// src/pages/geomonitor.astro
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Operador VVST | GeoMonitor</title>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans pb-32 overscroll-none">
+
+    <nav class="fixed top-0 w-full z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex justify-between items-center shadow-2xl">
+        <div class="flex items-center gap-3">
+            <a href="/" class="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-blue-500 hover:bg-blue-600 hover:text-white transition">
+                &larr;
+            </a>
+            <div class="leading-tight">
+                <h6 class="font-bold text-white tracking-wide text-sm">OPERADOR</h6>
+                <small class="text-blue-400 font-bold text-xs" id="projName">Cargando...</small>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <span id="statusLabel" class="badge bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">OFF</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="workToggle" class="sr-only peer" onchange="toggleWork(this)">
+                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-md mx-auto mt-20 px-4">
+
+        <div id="workZone" class="opacity-50 pointer-events-none transition-opacity duration-300">
+            
+            <form id="measureForm" class="flex flex-col gap-5">
+                
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">
+                        <i class="fas fa-calendar-check mr-1"></i> Campaña / Jornada
+                    </label>
+                    <div class="relative">
+                        <select id="campaignSelect" class="w-full bg-slate-900 border border-slate-700 text-amber-400 font-bold rounded-xl p-3 appearance-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" onchange="loadCampaignLog()" required>
+                            <option value="">Cargando...</option>
+                        </select>
+                        <div class="absolute right-3 top-3.5 text-slate-500 pointer-events-none">▼</div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">
+                        <i class="fas fa-map-marker-alt mr-1"></i> Punto a Medir
+                    </label>
+                    <div class="relative">
+                        <select id="pointSelect" class="w-full bg-slate-900 border border-slate-700 text-white text-lg font-bold rounded-xl p-3 appearance-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" onchange="checkPointMode()" required>
+                            <option value="">Selecciona campaña...</option>
+                        </select>
+                        <div class="absolute right-3 top-3.5 text-slate-500 pointer-events-none">▼</div>
+                    </div>
+
+                    <input type="text" id="newPointInput" class="w-full mt-2 bg-blue-900/20 border-2 border-blue-500 text-white font-bold rounded-xl p-3 uppercase placeholder-blue-300/50 hidden focus:outline-none" placeholder="NOMBRE DEL NUEVO PUNTO">
+                    
+                    <div id="duplicateAlert" class="hidden mt-2 bg-amber-900/30 border border-amber-600/50 text-amber-200 text-xs p-3 rounded-lg items-center gap-2">
+                        <span class="text-lg">⚠️</span>
+                        <span><strong>¡Atención!</strong> Este punto ya fue registrado hoy.</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] text-center block text-slate-500 font-bold mb-1">NORTE (Y)</label>
+                        <input type="number" step="0.001" id="pN" class="w-full bg-slate-900 border border-slate-700 text-white text-center font-mono rounded-lg p-2 focus:border-blue-500 outline-none" placeholder="0.000" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-center block text-slate-500 font-bold mb-1">ESTE (X)</label>
+                        <input type="number" step="0.001" id="pE" class="w-full bg-slate-900 border border-slate-700 text-white text-center font-mono rounded-lg p-2 focus:border-blue-500 outline-none" placeholder="0.000" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-center block text-slate-500 font-bold mb-1">COTA (Z)</label>
+                        <input type="number" step="0.001" id="pZ" class="w-full bg-slate-900 border border-slate-700 text-white text-center font-mono rounded-lg p-2 focus:border-blue-500 outline-none" placeholder="0.000" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Evidencia</label>
+                    <label for="pPhoto" id="camLabel" class="block w-full border-2 border-dashed border-slate-700 bg-slate-900 rounded-2xl p-6 text-center cursor-pointer hover:bg-slate-800 hover:border-blue-500 transition group relative overflow-hidden">
+                        <div id="camIconContainer" class="group-hover:scale-110 transition-transform">
+                            <div class="text-3xl text-slate-500 mb-2">📷</div>
+                            <div class="text-xs text-slate-400">Tocar para tomar foto</div>
+                        </div>
+                        <img id="photoPreview" class="hidden w-full h-48 object-cover rounded-xl mt-2 border border-slate-600">
+                    </label>
+                    <input type="file" id="pPhoto" accept="image/*" capture="environment" hidden onchange="previewFile()">
+                </div>
+
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-extrabold text-lg py-4 rounded-xl shadow-lg shadow-blue-900/50 active:scale-95 transition-transform flex justify-center items-center gap-2">
+                    <span>🚀</span> GUARDAR DATO
+                </button>
+
+            </form>
+        </div>
+
+        <div class="my-6 border-t border-slate-800"></div>
+
+        <h6 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Registros de hoy</h6>
+        <div id="dailyLog" class="flex flex-col gap-3 pb-10">
+            </div>
+
+    </div>
+
+    <script is:inline>
+        // Variables Globales
+        let pid = localStorage.getItem('vvst_pid') || '1'; // Default ID si no hay login real aun
+        let pointsInCurrentCampaign = [];
+        let isWorking = false;
+
+        // Nombre Proyecto (Simulado)
+        document.getElementById('projName').innerText = localStorage.getItem('vvst_pname') || 'Proyecto Demo';
+
+        // INICIALIZAR
+        init();
+
+        async function init() {
+            await loadActiveCampaigns();
+        }
+
+        // 1. CARGAR CAMPAÑAS (Llama a nuestra API de Astro)
+        async function loadActiveCampaigns() {
+            try {
+                // NOTA: Cambiamos api.php por /api/operations
+                const res = await fetch(`/api/operations?action=get_campaigns&project_id=${pid}`);
+                const data = await res.json();
+                
+                const sel = document.getElementById('campaignSelect');
+                sel.innerHTML = '<option value="" disabled selected>-- Seleccionar Jornada --</option>';
+                
+                if(data.length === 0) {
+                    sel.innerHTML = '<option value="">⛔ NO HAY CAMPAÑAS</option>';
+                } else {
+                    data.forEach(c => {
+                        sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    });
+                }
+            } catch(e) { console.error("Error cargando campañas", e); }
+        }
+
+        // 2. CARGAR LOG Y PUNTOS
+        async function loadCampaignLog() {
+            const cid = document.getElementById('campaignSelect').value;
+            if(!cid) return;
+
+            const res = await fetch(`/api/operations?action=get_campaign_log&campaign_id=${cid}`);
+            const data = await res.json();
+            const div = document.getElementById('dailyLog');
+            
+            div.innerHTML = '';
+            pointsInCurrentCampaign = [];
+
+            if(data.length === 0) div.innerHTML = '<div class="text-slate-600 text-center py-4 text-sm">Sin registros aún.</div>';
+
+            data.forEach(d => {
+                pointsInCurrentCampaign.push(d.point_id);
+                div.innerHTML += `
+                    <div class="bg-slate-900 p-4 rounded-xl border-l-4 border-emerald-500 flex justify-between items-center shadow-sm">
+                        <div>
+                            <h6 class="font-bold text-white text-base">${d.point_id}</h6>
+                            <div class="text-xs text-slate-400 mt-1 font-mono">
+                                N:${parseFloat(d.north).toFixed(3)} E:${parseFloat(d.east).toFixed(3)}
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-500 font-mono">${d.time}</div>
+                    </div>
+                `;
+            });
+
+            await loadPointsMasterList();
+        }
+
+        // 3. CARGAR LISTA MAESTRA DE PUNTOS
+        async function loadPointsMasterList() {
+            const res = await fetch(`/api/operations?action=get_project_points&project_id=${pid}`);
+            const points = await res.json();
+            const sel = document.getElementById('pointSelect');
+            const currentVal = sel.value;
+
+            sel.innerHTML = '<option value="" disabled selected>Seleccione...</option>';
+            sel.innerHTML += '<option value="NEW_POINT" class="text-amber-400 font-bold">➕ NUEVO PUNTO</option>';
+            
+            points.forEach(p => {
+                const isDone = pointsInCurrentCampaign.includes(p.name); // Asumiendo que el objeto tiene 'name'
+                const mark = isDone ? '✅ ' : '';
+                const style = isDone ? 'color: #10b981;' : ''; // Verde esmeralda
+                // Si la API devuelve solo strings: use p. Si devuelve objetos: use p.name
+                const pName = p.name || p; 
+                sel.innerHTML += `<option value="${pName}" style="${style}">${mark}${pName}</option>`;
+            });
+
+            if(currentVal) sel.value = currentVal;
+            checkPointMode();
+        }
+
+        // 4. INTERACTIVIDAD
+        function checkPointMode() {
+            const val = document.getElementById('pointSelect').value;
+            const input = document.getElementById('newPointInput');
+            const alert = document.getElementById('duplicateAlert');
+
+            if(val === 'NEW_POINT') {
+                input.classList.remove('hidden');
+                input.required = true;
+                input.focus();
+                alert.classList.add('hidden');
+            } else {
+                input.classList.add('hidden');
+                input.required = false;
+                // Verificar duplicados
+                if(pointsInCurrentCampaign.includes(val)) {
+                    alert.classList.remove('hidden');
+                    alert.classList.add('flex');
+                } else {
+                    alert.classList.add('hidden');
+                    alert.classList.remove('flex');
+                }
+            }
+        }
+
+        function toggleWork(checkbox) {
+            isWorking = checkbox.checked;
+            const zone = document.getElementById('workZone');
+            const label = document.getElementById('statusLabel');
+
+            if(isWorking) {
+                zone.classList.remove('opacity-50', 'pointer-events-none');
+                label.className = 'badge bg-emerald-500 text-white text-[10px] px-2 py-0.5 rounded font-bold';
+                label.innerText = 'ONLINE';
+            } else {
+                zone.classList.add('opacity-50', 'pointer-events-none');
+                label.className = 'badge bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold';
+                label.innerText = 'OFF';
+            }
+        }
+
+        function previewFile() {
+            const input = document.getElementById('pPhoto');
+            const preview = document.getElementById('photoPreview');
+            const iconContainer = document.getElementById('camIconContainer');
+            const label = document.getElementById('camLabel');
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    iconContainer.classList.add('hidden');
+                    label.classList.add('border-emerald-500', 'bg-emerald-900/10');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // 5. ENVIAR FORMULARIO
+        document.getElementById('measureForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const cid = document.getElementById('campaignSelect').value;
+            
+            const btn = document.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ GUARDANDO...';
+
+            const fd = new FormData();
+            fd.append('project_id', pid);
+            fd.append('campaign_id', cid);
+            // fd.append('user_id', ...); // Si tienes user ID real
+
+            let pt = document.getElementById('pointSelect').value;
+            if(pt === 'NEW_POINT') pt = document.getElementById('newPointInput').value.trim().toUpperCase();
+            
+            fd.append('point_id', pt);
+            fd.append('north', document.getElementById('pN').value);
+            fd.append('east', document.getElementById('pE').value);
+            fd.append('elevation', document.getElementById('pZ').value);
+            
+            if(document.getElementById('pPhoto').files[0]) {
+                fd.append('photo', document.getElementById('pPhoto').files[0]);
+            }
+
+            try {
+                // Enviamos a la API de Astro
+                const res = await fetch('/api/operations?action=upload_point', { method: 'POST', body: fd });
+                const d = await res.json();
+
+                if(d.status === 'success') {
+                    // Limpiar formulario
+                    document.getElementById('measureForm').reset();
+                    document.getElementById('photoPreview').classList.add('hidden');
+                    document.getElementById('camIconContainer').classList.remove('hidden');
+                    document.getElementById('newPointInput').classList.add('hidden');
+                    document.getElementById('camLabel').classList.remove('border-emerald-500', 'bg-emerald-900/10');
+                    
+                    // Recargar Log
+                    await loadCampaignLog();
+                    alert("✅ Guardado correctamente");
+                } else {
+                    alert("❌ Error: " + d.message);
+                }
+            } catch(err) {
+                console.error(err);
+                alert("❌ Error de conexión con el servidor");
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+---
+// src/pages/dashboard.astro
+// HUB CENTRAL: Distribuidor de tráfico según permisos
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Panel VVST</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Roboto', sans-serif; }
+        .module-locked { filter: grayscale(100%); opacity: 0.7; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col">
+
+    <script is:inline>
+        const user = localStorage.getItem('vvst_user');
+        if (!user) window.location.href = '/login';
+    </script>
+
+    <nav class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-black text-sm">VV</div>
+            <div>
+                <h1 class="text-sm font-black text-slate-900 leading-none">VV SURVEY TECH</h1>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Portal de Servicios</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Usuario</p>
+                <p class="text-sm font-bold text-slate-700" id="username-display">Cargando...</p>
+            </div>
+            <button onclick="logout()" class="text-xs bg-slate-100 text-slate-500 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition font-bold border border-slate-200">
+                <i class="fas fa-power-off"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <div class="max-w-5xl mx-auto">
+            
+            <header class="mb-10 flex justify-between items-end">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">Mis Aplicaciones</h2>
+                    <p class="text-slate-500">Módulos habilitados para su cuenta.</p>
+                </div>
+                <div id="loader-status" class="text-xs text-blue-600 font-bold animate-pulse">Verificando accesos...</div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <div id="card-geo_mon" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition group relative hidden">
+                    <div class="absolute top-3 right-3 flex gap-2">
+                        <a id="admin-btn-geo_mon" href="/admin/monitoring" class="hidden bg-slate-100 text-slate-500 hover:text-blue-600 hover:bg-white px-2 py-1 rounded border border-slate-200 text-xs shadow-sm transition" title="Gestionar Datos del Proyecto">
+                            <i class="fas fa-cog"></i> Gestionar
+                        </a>
+                        <span id="badge-geo_mon" class="text-[10px] font-bold px-2 py-1 rounded border">--</span>
+                    </div>
+                    
+                    <div class="h-32 bg-slate-50 flex items-center justify-center group-hover:bg-blue-50 transition">
+                        <i class="fas fa-satellite-dish text-4xl text-blue-600"></i>
+                    </div>
+                    
+                    <div class="p-5">
+                        <h3 class="font-bold text-slate-900 mb-1">Geotechnical Monitor</h3>
+                        <p class="text-xs text-slate-500 mb-4 h-10">Visualización de desplazamientos, mapas vectoriales y reportes.</p>
+                        
+                        <div class="flex gap-2">
+                            <a href="/viewer" id="btn-geo_mon" class="flex-1 py-2 text-center rounded-lg text-xs font-bold transition">
+                                VER MAPAS
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="card-asset_mgr" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden opacity-60 hidden">
+                    <div class="absolute top-3 right-3">
+                        <span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded border border-slate-200">PRÓXIMAMENTE</span>
+                    </div>
+                    <div class="h-32 bg-slate-50 flex items-center justify-center">
+                        <i class="fas fa-boxes-stacked text-4xl text-slate-300"></i>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-bold text-slate-700 mb-1">Asset Manager</h3>
+                        <p class="text-xs text-slate-500 mb-4 h-10">Gestión de inventarios y personal.</p>
+                        <button disabled class="block w-full py-2 text-center border border-slate-300 text-slate-400 bg-slate-50 rounded-lg text-xs font-bold cursor-not-allowed">
+                            EN DESARROLLO
+                        </button>
+                    </div>
+                </div>
+
+                <div id="global-admin-card" class="hidden bg-slate-900 rounded-xl shadow-lg border border-slate-800 overflow-hidden relative">
+                    <div class="absolute top-3 right-3">
+                        <span class="bg-purple-900 text-purple-200 text-[10px] font-bold px-2 py-1 rounded border border-purple-700">GLOBAL</span>
+                    </div>
+                    <div class="h-32 bg-slate-800 flex items-center justify-center">
+                        <i class="fas fa-user-shield text-4xl text-purple-400"></i>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-bold text-white mb-1">Gestión Global</h3>
+                        <p class="text-xs text-slate-400 mb-4 h-10">Crear usuarios, cobrar licencias.</p>
+                        <a href="/admin" class="block w-full py-2 text-center bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition">
+                            PANEL DE CONTROL
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script is:inline>
+        const username = localStorage.getItem('vvst_user');
+        const role = localStorage.getItem('vvst_role'); // 'admin', 'manager', 'operator', 'client'
+        
+        document.getElementById('username-display').innerText = username || 'Usuario';
+
+        function setupCard(code, isActive) {
+            const card = document.getElementById(`card-${code}`);
+            if(!card) return;
+            card.classList.remove('hidden');
+
+            const badge = document.getElementById(`badge-${code}`);
+            const btn = document.getElementById(`btn-${code}`);
+            const adminBtn = document.getElementById(`admin-btn-${code}`);
+
+            if (isActive) {
+                // ACTIVO
+                card.classList.remove('opacity-60');
+                badge.className = "bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded border border-emerald-200";
+                badge.innerText = "ACTIVO";
+                
+                btn.className = "block w-full py-2 text-center bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition";
+                btn.href = "/viewer";
+
+                // MOSTRAR BOTÓN DE GESTIÓN SI TIENE PERMISO
+                // AQUÍ AGREGAMOS AL 'MANAGER'
+                if (role === 'admin' || role === 'operator' || role === 'manager') {
+                    if(adminBtn) adminBtn.classList.remove('hidden');
+                }
+
+            } else {
+                // INACTIVO
+                card.classList.add('opacity-70');
+                badge.className = "bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded border border-slate-200";
+                badge.innerText = "NO CONTRATADO";
+                
+                btn.className = "block w-full py-2 text-center border border-slate-300 text-slate-400 bg-slate-50 rounded-lg text-xs font-bold cursor-not-allowed";
+                btn.innerText = "CONTACTAR VENTAS";
+                btn.href = "#";
+                btn.onclick = (e) => { e.preventDefault(); alert("Contacte a soporte para adquirir este módulo."); }
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`/api/dashboard?user=${username}`);
+                const data = await res.json();
+                document.getElementById('loader-status').style.display = 'none';
+
+                if (data.status === 'success') {
+                    const lic = data.licenses || [];
+                    
+                    // 1. Configurar Monitor
+                    // Admin siempre tiene acceso, o si está en la lista de licencias
+                    const hasMonitor = role === 'admin' || lic.includes('geo_mon');
+                    setupCard('geo_mon', hasMonitor);
+
+                    // 2. Configurar Asset Manager (Placeholder)
+                    const hasAsset = role === 'admin' || lic.includes('asset_mgr');
+                    setupCard('asset_mgr', hasAsset);
+
+                    // 3. Tarjeta Global (Solo Super Admin)
+                    if (role === 'admin') {
+                        document.getElementById('global-admin-card').classList.remove('hidden');
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function logout() { localStorage.clear(); window.location.href = '/'; }
+        
+        loadDashboard();
+    </script>
+</body>
+</html>
