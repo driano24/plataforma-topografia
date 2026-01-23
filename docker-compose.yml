@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # 1. Tu Plataforma de Ingeniería (Astro)
+  app:
+    container_name: vv_survey_app
+    build: .
+    restart: always
+    ports:
+      - "4321:4321"
+    environment:
+      # En Docker, el host de la base de datos es el nombre del servicio: "db"
+      - DATABASE_URL=postgres://admin:TopografiaSegura2026@db:5432/ingenieria_db
+      - HOST=0.0.0.0
+      - PORT=4321
+    depends_on:
+      - db
+
+  # 2. Base de Datos (PostgreSQL + PostGIS para Topografía)
+  db:
+    container_name: vv_survey_db
+    image: postgis/postgis:15-3.3-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: TopografiaSegura2026 # ¡Cambia esto en producción!
+      POSTGRES_DB: ingenieria_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data # Esto asegura que no pierdas datos si reinicias
+    ports:
+      - "5432:5432" # Opcional: ciérralo con firewall en el VPS por seguridad
+
+  # 3. Panel de Administración de Base de Datos (Opcional pero recomendado)
+  pgadmin:
+    container_name: vv_survey_pgadmin
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@vvsurvey.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+
+volumes:
+  pg_data:
